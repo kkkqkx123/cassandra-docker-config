@@ -1,0 +1,183 @@
+# Apache Cassandra Docker Compose 配置文件
+# 版本：1.0
+# 说明：提供单节点和三节点集群两种配置模式
+
+services:
+  # ========================================
+  # 单节点部署配置
+  # ========================================
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra
+    hostname: cassandra-node1
+    restart: unless-stopped
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    
+    # 端口映射
+    ports:
+      - "${CQL_PORT:-9042}:9042"    # CQL 查询端口
+      - "${JMX_PORT:-7199}:7199"    # JMX 监控端口
+      - "${TRANSPORT_PORT:-7000}:7000"  # 节点间通信端口
+    
+    # 数据卷挂载
+    volumes:
+      - ./volumes/data:/var/lib/cassandra/data
+      - ./volumes/commitlog:/var/lib/cassandra/commitlog
+      - ./volumes/saved_caches:/var/lib/cassandra/saved_caches
+      - ./volumes/config:/etc/cassandra
+    
+    # 环境变量
+    environment:
+      - CASSANDRA_CLUSTER_NAME=${CASSANDRA_CLUSTER_NAME:-MyCluster}
+      - CASSANDRA_LISTEN_ADDRESS=0.0.0.0
+      - CASSANDRA_BROADCAST_ADDRESS=${CASSANDRA_BROADCAST_ADDRESS:-localhost}
+      - CASSANDRA_START_RPC=${CASSANDRA_START_RPC:-false}
+      - CASSANDRA_NUM_TOKENS=${CASSANDRA_NUM_TOKENS:-256}
+      - MAX_HEAP_SIZE=${MAX_HEAP_SIZE:-512M}
+      - HEAP_NEWSIZE=${HEAP_NEWSIZE:-100M}
+      - JVM_OPTS=${JVM_OPTS:--XX:+UseG1GC}
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -E '^UN'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    # 网络配置
+    networks:
+      - cassandra-network
+
+  # ========================================
+  # 三节点集群配置 (取消注释以启用)
+  # ========================================
+  # cassandra-node1:
+  #   image: cassandra:latest
+  #   container_name: cassandra-node1
+  #   hostname: cassandra-node1
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '2.0'
+  #         memory: 2G
+  #   ports:
+  #     - "9042:9042"
+  #     - "7199:7199"
+  #     - "7000:7000"
+  #   volumes:
+  #     - ./volumes/node1/data:/var/lib/cassandra/data
+  #     - ./volumes/node1/commitlog:/var/lib/cassandra/commitlog
+  #     - ./volumes/node1/saved_caches:/var/lib/cassandra/saved_caches
+  #   environment:
+  #     - CASSANDRA_CLUSTER_NAME=MyCluster
+  #     - CASSANDRA_LISTEN_ADDRESS=0.0.0.0
+  #     - CASSANDRA_BROADCAST_ADDRESS=cassandra-node1
+  #     - CASSANDRA_SEEDS=cassandra-node1
+  #     - CASSANDRA_NUM_TOKENS=256
+  #     - MAX_HEAP_SIZE=512M
+  #     - HEAP_NEWSIZE=100M
+  #   networks:
+  #     - cassandra-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "nodetool status | grep -E '^UN'"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+
+  # cassandra-node2:
+  #   image: cassandra:latest
+  #   container_name: cassandra-node2
+  #   hostname: cassandra-node2
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '2.0'
+  #         memory: 2G
+  #   ports:
+  #     - "9043:9042"
+  #     - "7200:7199"
+  #     - "7001:7000"
+  #   volumes:
+  #     - ./volumes/node2/data:/var/lib/cassandra/data
+  #     - ./volumes/node2/commitlog:/var/lib/cassandra/commitlog
+  #     - ./volumes/node2/saved_caches:/var/lib/cassandra/saved_caches
+  #   environment:
+  #     - CASSANDRA_CLUSTER_NAME=MyCluster
+  #     - CASSANDRA_LISTEN_ADDRESS=0.0.0.0
+  #     - CASSANDRA_BROADCAST_ADDRESS=cassandra-node2
+  #     - CASSANDRA_SEEDS=cassandra-node1
+  #     - CASSANDRA_NUM_TOKENS=256
+  #     - MAX_HEAP_SIZE=512M
+  #     - HEAP_NEWSIZE=100M
+  #   depends_on:
+  #     - cassandra-node1
+  #   networks:
+  #     - cassandra-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "nodetool status | grep -E '^UN'"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+
+  # cassandra-node3:
+  #   image: cassandra:latest
+  #   container_name: cassandra-node3
+  #   hostname: cassandra-node3
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '2.0'
+  #         memory: 2G
+  #   ports:
+  #     - "9044:9042"
+  #     - "7201:7199"
+  #     - "7002:7000"
+  #   volumes:
+  #     - ./volumes/node3/data:/var/lib/cassandra/data
+  #     - ./volumes/node3/commitlog:/var/lib/cassandra/commitlog
+  #     - ./volumes/node3/saved_caches:/var/lib/cassandra/saved_caches
+  #   environment:
+  #     - CASSANDRA_CLUSTER_NAME=MyCluster
+  #     - CASSANDRA_LISTEN_ADDRESS=0.0.0.0
+  #     - CASSANDRA_BROADCAST_ADDRESS=cassandra-node3
+  #     - CASSANDRA_SEEDS=cassandra-node1
+  #     - CASSANDRA_NUM_TOKENS=256
+  #     - MAX_HEAP_SIZE=512M
+  #     - HEAP_NEWSIZE=100M
+  #   depends_on:
+  #     - cassandra-node1
+  #   networks:
+  #     - cassandra-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "nodetool status | grep -E '^UN'"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+
+# 网络配置
+networks:
+  cassandra-network:
+    driver: bridge
+    name: cassandra-network
+
+# 数据卷声明 (可选，使用绑定挂载时不需要)
+# volumes:
+#   cassandra_data:
+#   cassandra_commitlog:
+#   cassandra_caches:
