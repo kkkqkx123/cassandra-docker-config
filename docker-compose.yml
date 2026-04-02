@@ -11,41 +11,32 @@ services:
     container_name: cassandra
     hostname: cassandra-node1
     restart: unless-stopped
-    
-    # 资源限制
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '1.0'
-          memory: 1G
-    
+
+    # 资源限制（使用Docker默认设置）
+
     # 端口映射
     ports:
-      - "${CQL_PORT:-9042}:9042"    # CQL 查询端口
-      - "${JMX_PORT:-7199}:7199"    # JMX 监控端口
-      - "${TRANSPORT_PORT:-7000}:7000"  # 节点间通信端口
-    
+      - "${CQL_PORT:-9042}:9042" # CQL 查询端口
+      - "${JMX_PORT:-7199}:7199" # JMX 监控端口
+      - "${TRANSPORT_PORT:-7000}:7000" # 节点间通信端口
+
     # 数据卷挂载
     volumes:
       - ./volumes/data:/var/lib/cassandra/data
       - ./volumes/commitlog:/var/lib/cassandra/commitlog
       - ./volumes/saved_caches:/var/lib/cassandra/saved_caches
-      - ./volumes/config:/etc/cassandra
-    
+
     # 环境变量
     environment:
       - CASSANDRA_CLUSTER_NAME=${CASSANDRA_CLUSTER_NAME:-MyCluster}
-      - CASSANDRA_LISTEN_ADDRESS=0.0.0.0
+      - CASSANDRA_LISTEN_ADDRESS=auto
       - CASSANDRA_BROADCAST_ADDRESS=${CASSANDRA_BROADCAST_ADDRESS:-localhost}
       - CASSANDRA_START_RPC=${CASSANDRA_START_RPC:-false}
       - CASSANDRA_NUM_TOKENS=${CASSANDRA_NUM_TOKENS:-256}
       - MAX_HEAP_SIZE=${MAX_HEAP_SIZE:-512M}
       - HEAP_NEWSIZE=${HEAP_NEWSIZE:-100M}
       - JVM_OPTS=${JVM_OPTS:--XX:+UseG1GC}
-    
+
     # 健康检查
     healthcheck:
       test: ["CMD-SHELL", "nodetool status | grep -E '^UN'"]
@@ -53,7 +44,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    
+
     # 网络配置
     networks:
       - cassandra-network
